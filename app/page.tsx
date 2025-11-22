@@ -1,103 +1,150 @@
-import Image from "next/image";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
+import { useState, useEffect } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import DeliveryDashboard from "@/components/delivery-dashboard"
+import MapView from "@/components/map-view"
+import LiveTracking from "@/components/live-tracking"
+import { Map, LayoutGrid, Navigation } from "lucide-react"
+import useOrders from "@/lib/useOrders"
+import AuthPage from "@/components/auth"
 
-export default function Home() {
+
+export default function App() {
+  const [user, setUser] = useState(null)
+
+  if (!user) {
+    return <AuthPage onAuthSuccess={setUser} />
+  }
+
+  return <DeliveryDashboard user={user} />
+}
+
+export function Home() {
+  const [selectedZone, setSelectedZone] = useState("rajiv-chowk")
+  const [activeTab, setActiveTab] = useState("dashboard")
+  const { orders = [], loading, error } = useOrders()
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+
+  useEffect(() => {
+    if (!loading && orders.length > 0) {
+      // Find first order with valid delivery_zip_code
+      const validOrder = (orders as any[]).find((o: any) => o.delivery_zip_code)
+      if (validOrder) setSelectedOrder(validOrder)
+    }
+  }, [loading, orders])
+
+  // FIXED: Filter orders by selected zone with null checks
+  const zoneOrders = (orders as any[]).filter((order: any) => {
+    // Skip orders without delivery_zip_code
+    if (!order.delivery_zip_code) return false
+    
+    if (selectedZone === "rajiv-chowk" || selectedZone === "connaught-place") {
+      return order.delivery_zip_code === "110001"
+    }
+    if (selectedZone === "kashmere-gate") {
+      return order.delivery_zip_code === "110006"
+    }
+    if (selectedZone === "b-block-sanik") {
+      return order.delivery_zip_code === "110030"
+    }
+    if (selectedZone === "new-delhi") {
+      return order.delivery_zip_code === "110002"
+    }
+    return true
+  })
+
+  // Debug logging
+  useEffect(() => {
+    console.log('📊 Page.tsx State:', {
+      totalOrders: orders.length,
+      zoneOrders: zoneOrders.length,
+      selectedZone,
+      loading,
+      error: error?.message
+    })
+  }, [orders, zoneOrders, selectedZone, loading, error])
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="min-h-screen bg-background pb-28 md:pb-20">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Top header removed - tabs are available in the footer only */}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        <TabsContent value="dashboard" className="m-0">
+          <DeliveryDashboard
+            onNavigateToMap={(order: any) => {
+              setSelectedOrder(order)
+              setActiveTab("map")
+            }}
+          />
+        </TabsContent>
+
+        {/* Footer Tabs: mirrored tabs fixed to viewport bottom for all pages */}
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-slate-200 shadow-sm pb-[env(safe-area-inset-bottom)]">
+          <div className="max-w-7xl mx-auto px-6 md:px-8">
+            <TabsList className="grid w-full grid-cols-3 bg-transparent rounded-none h-auto p-0">
+              <TabsTrigger
+                value="dashboard"
+                className="rounded-none border-t-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent px-6 py-4 flex items-center gap-2"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger
+                value="map"
+                className="rounded-none border-t-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent px-6 py-4 flex items-center gap-2"
+              >
+                <Map className="w-4 h-4" />
+                Map View
+              </TabsTrigger>
+              <TabsTrigger
+                value="tracking"
+                className="rounded-none border-t-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent px-6 py-4 flex items-center gap-2"
+              >
+                <Navigation className="w-4 h-4" />
+                Live Tracking
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+
+        <TabsContent value="map" className="m-0 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Route Optimization</h1>
+              <p className="text-slate-600">View and optimize your delivery routes</p>
+            </div>
+            {loading ? (
+              <div className="text-center py-12 text-slate-600">Loading orders...</div>
+            ) : zoneOrders.length === 0 ? (
+              <div className="text-center py-12 text-slate-600">No orders available for map view</div>
+            ) : (
+              <MapView orders={zoneOrders} selectedZone={selectedZone} selectedOrder={selectedOrder} />
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tracking" className="m-0 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Live Tracking</h1>
+              <p className="text-slate-600">Track delivery in real-time</p>
+            </div>
+            {loading ? (
+              <div className="text-center py-12 text-slate-600">Loading order...</div>
+            ) : !selectedOrder ? (
+              <div className="text-center py-12 text-slate-600">No order selected</div>
+            ) : (
+              <LiveTracking
+                order={selectedOrder}
+                onStatusChange={(status: any) => {
+                  setSelectedOrder({ ...selectedOrder, status })
+                }}
+              />
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </main>
+  )
 }
