@@ -10,14 +10,36 @@ import useOrders from "@/lib/useOrders"
 import AuthPage from "@/components/auth"
 
 
+// export default function App() {
+//   const [user, setUser] = useState(null)
+
+//   if (!user) {
+//     return <AuthPage onAuthSuccess={setUser} />
+//   }
+
+//   return <DeliveryDashboard user={user} />
+// }
+
+
+
+
 export default function App() {
   const [user, setUser] = useState(null)
+
+  const handleLogout = () => {
+    setUser(null)
+  }
 
   if (!user) {
     return <AuthPage onAuthSuccess={setUser} />
   }
 
-  return <DeliveryDashboard user={user} />
+  return (
+    <DeliveryDashboard 
+      user={user} 
+      onLogout={handleLogout}
+    />
+  )
 }
 
 export function Home() {
